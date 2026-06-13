@@ -15,14 +15,19 @@
 
     <!-- ADMIN DASHBOARD UI -->
     <div class="max-w-6xl mx-auto">
-        <div class="flex justify-between items-end mb-8 border-b pb-4">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b pb-4 gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800 mb-2">🧑‍🍳 Love and Luto Dashboard</h1>
-                <p class="text-gray-600">Manage your menu, upload photos, and generate your updated website.</p>
+                <p class="text-gray-600">Manage your menu, upload photos, and generate your updated apps.</p>
             </div>
-            <button onclick="downloadWebsite()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
-                📥 Download Updated Website
-            </button>
+            <div class="flex gap-3 w-full md:w-auto">
+                <button onclick="downloadWebsite()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-5 rounded-xl shadow-lg transform hover:scale-105 transition-all text-sm">
+                    📥 Download Website <br><span class="text-xs font-normal opacity-80">(index.html)</span>
+                </button>
+                <button onclick="downloadPOS()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-xl shadow-lg transform hover:scale-105 transition-all text-sm">
+                    💳 Download POS <br><span class="text-xs font-normal opacity-80">(pos.html)</span>
+                </button>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -647,6 +652,544 @@
     </template>
 
     <!-- ========================================================= -->
+    <!-- HIDDEN TEMPLATE TO GENERATE POS.HTML -->
+    <!-- ========================================================= -->
+
+    <template id="tpl-pos">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS System | Love and Luto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            light: '#ffedd5',
+                            DEFAULT: '#f97316',
+                            dark: '#c2410c',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f3f4f6; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #printableReceipt, #printableReceipt * { visibility: visible; }
+            #printableReceipt {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col font-sans text-gray-800">
+
+    <header class="bg-gray-900 text-white h-16 flex items-center justify-between px-4 sm:px-6 shadow-md z-10 shrink-0 print:hidden">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <span class="text-xl sm:text-2xl">👨‍🍳</span>
+            <h1 class="font-bold text-lg sm:text-xl tracking-wide hidden sm:block">Love & Luto <span class="text-brand font-normal">POS</span></h1>
+            <h1 class="font-bold text-lg tracking-wide sm:hidden">L&L <span class="text-brand font-normal">POS</span></h1>
+        </div>
+        <div class="flex gap-2 sm:gap-4">
+            <button onclick="viewTransactions()" class="text-xs sm:text-sm bg-gray-800 hover:bg-gray-700 px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors">
+                <span class="sm:hidden">🧾 Txns</span>
+                <span class="hidden sm:inline">🧾 View Transactions</span>
+            </button>
+            <div id="clock" class="text-xs sm:text-sm font-mono bg-gray-800 px-3 sm:px-4 py-2 rounded-lg flex items-center">
+                00:00:00
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden print:hidden relative w-full">
+        
+        <div class="flex-1 flex flex-col bg-gray-100 relative w-full lg:w-auto">
+            <div id="categoryTabs" class="flex p-4 gap-2 overflow-x-auto bg-white shadow-sm shrink-0"></div>
+
+            <div class="flex-1 overflow-y-auto p-4 relative">
+                <div id="posGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-28 lg:pb-4"></div>
+            </div>
+
+            <button id="mobileCartBtn" onclick="toggleMobileCart()" class="lg:hidden absolute bottom-6 left-4 right-4 bg-gray-900 text-white p-4 rounded-2xl shadow-2xl z-20 flex justify-between items-center transition-transform active:scale-95 hidden">
+                <div class="flex items-center gap-3">
+                    <span class="bg-brand text-white text-sm font-bold px-3 py-1 rounded-full shadow-sm" id="mobileCartCount">0</span>
+                    <span class="font-bold text-sm">View Current Order</span>
+                </div>
+                <span class="font-bold text-xl text-brand" id="mobileCartTotal">$0.00</span>
+            </button>
+        </div>
+
+        <div id="cartOverlay" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden transition-opacity" onclick="toggleMobileCart()"></div>
+
+        <div id="cartPane" class="fixed inset-y-0 right-0 w-full sm:w-96 bg-white shadow-2xl z-40 transform translate-x-full transition-transform duration-300 lg:translate-x-0 lg:relative lg:shadow-[-4px_0_15px_rgba(0,0,0,0.05)] lg:z-10 flex flex-col shrink-0 print:hidden">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h2 class="font-bold text-lg text-gray-800">Current Order</h2>
+                <div class="flex gap-2">
+                    <button onclick="clearOrder()" class="text-sm text-red-500 hover:text-red-700 font-semibold px-2 py-1 bg-red-50 rounded">Clear All</button>
+                    <button onclick="toggleMobileCart()" class="lg:hidden text-gray-500 hover:text-gray-800 font-bold px-3 py-1 bg-gray-200 rounded-md text-lg">&times;</button>
+                </div>
+            </div>
+
+            <div id="orderList" class="flex-1 overflow-y-auto p-4 space-y-3">
+                <div class="text-center text-gray-400 mt-10 text-sm italic">No items in the order yet.</div>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-t border-gray-200 shrink-0 space-y-3">
+                <div class="flex justify-between text-gray-600 font-semibold text-sm">
+                    <span>Subtotal</span>
+                    <span id="posSubtotal">$0.00</span>
+                </div>
+                <div class="flex justify-between text-gray-600 font-semibold text-sm">
+                    <span>Tax (Included)</span>
+                    <span>$0.00</span>
+                </div>
+                <div class="flex justify-between text-gray-900 font-bold text-2xl pt-2 border-t border-gray-200">
+                    <span>Total</span>
+                    <span id="posTotal" class="text-brand-dark">$0.00</span>
+                </div>
+                
+                <button onclick="openCheckoutModal()" class="w-full bg-brand hover:bg-brand-dark text-white font-bold text-lg py-4 rounded-xl shadow-lg transition-transform transform active:scale-95 mt-4">
+                    CHARGE <span id="btnTotal">$0.00</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkoutModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 print:hidden">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform transition-all">
+            <div class="bg-gray-900 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg">Complete Payment</h3>
+                <button onclick="closeCheckoutModal()" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <div class="text-center">
+                    <p class="text-gray-500 font-semibold text-sm uppercase tracking-wider">Amount Due</p>
+                    <p id="checkoutAmountDue" class="text-4xl font-bold text-gray-900 mt-1">$0.00</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Amount Tendered ($)</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xl">$</span>
+                        <input type="number" id="amountTendered" class="w-full pl-10 pr-4 py-3 text-2xl font-bold border-2 border-gray-300 rounded-xl outline-none focus:border-brand focus:ring-4 focus:ring-brand/20 transition-all" placeholder="0.00" oninput="calculateChange()">
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-gray-100 p-4 rounded-xl">
+                    <span class="font-semibold text-gray-600">Change Due:</span>
+                    <span id="checkoutChange" class="font-bold text-2xl text-green-600">$0.00</span>
+                </div>
+
+                <button id="completeTransactionBtn" onclick="processTransaction()" class="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold text-lg py-4 rounded-xl shadow-md transition-colors" disabled>
+                    Complete & Print Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="historyModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 print:hidden">
+        <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                <h3 class="font-bold text-xl text-gray-800">Transaction History</h3>
+                <button onclick="closeHistoryModal()" class="text-gray-500 hover:text-red-500 text-2xl font-bold">&times;</button>
+            </div>
+            <div class="flex-1 overflow-auto p-6 bg-gray-100">
+                <table class="w-full text-left bg-white rounded-xl overflow-hidden shadow-sm">
+                    <thead class="bg-gray-900 text-white">
+                        <tr>
+                            <th class="p-3 text-sm">Tx ID</th>
+                            <th class="p-3 text-sm">Date/Time</th>
+                            <th class="p-3 text-sm">Items</th>
+                            <th class="p-3 text-sm">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="printableReceipt" class="hidden p-8 w-[80mm] mx-auto text-black font-mono text-sm leading-tight bg-white">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold uppercase mb-1">Love and Luto</h2>
+            <p class="text-xs text-gray-600">Auckland, New Zealand</p>
+            <p class="text-xs text-gray-600">Insta: @loveandluto</p>
+            <p class="text-xs text-gray-600" id="receiptPhone">Ph: 642041280989</p>
+        </div>
+        
+        <div class="border-b-2 border-dashed border-gray-400 pb-2 mb-2 text-xs">
+            <div class="flex justify-between mb-1">
+                <span>Date:</span> <span id="r_date"></span>
+            </div>
+            <div class="flex justify-between mb-1">
+                <span>Time:</span> <span id="r_time"></span>
+            </div>
+            <div class="flex justify-between">
+                <span>Receipt #:</span> <span id="r_txId"></span>
+            </div>
+        </div>
+
+        <table class="w-full mb-4 text-xs">
+            <thead>
+                <tr class="border-b border-gray-300">
+                    <th class="text-left py-1 w-3/5">Item</th>
+                    <th class="text-center py-1 w-1/5">Qty</th>
+                    <th class="text-right py-1 w-1/5">Amt</th>
+                </tr>
+            </thead>
+            <tbody id="r_items"></tbody>
+        </table>
+
+        <div class="border-t-2 border-dashed border-gray-400 pt-2 mb-6">
+            <div class="flex justify-between font-bold text-base mb-1">
+                <span>TOTAL</span>
+                <span id="r_total"></span>
+            </div>
+            <div class="flex justify-between text-xs text-gray-600 mb-1">
+                <span>Tendered (Cash)</span>
+                <span id="r_tendered"></span>
+            </div>
+            <div class="flex justify-between text-xs text-gray-600">
+                <span>Change</span>
+                <span id="r_change"></span>
+            </div>
+        </div>
+
+        <div class="text-center text-xs text-gray-500">
+            <p class="mb-1 font-bold text-gray-800">Thank you for your order!</p>
+            <p>Made with Love & Luto ❤️</p>
+        </div>
+    </div>
+
+    <script>
+        let posCart = [];
+        let menuData = null;
+        let transactions = JSON.parse(localStorage.getItem('loveAndLutoTransactions')) || [];
+        let currentFilter = 'all';
+
+        const DEFAULT_DATA = __MENU_DATA__;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            menuData = JSON.parse(localStorage.getItem('loveAndLutoData')) || DEFAULT_DATA;
+            document.getElementById('receiptPhone').innerText = \`Ph: +\${menuData.phone || '642041280989'}\`;
+
+            renderCategoryTabs();
+            renderMenuGrid();
+            updateClock();
+            setInterval(updateClock, 1000);
+        });
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: true });
+        }
+
+        function renderCategoryTabs() {
+            const tabsContainer = document.getElementById('categoryTabs');
+            tabsContainer.innerHTML = '';
+
+            const allBtn = document.createElement('button');
+            allBtn.className = \`px-6 py-2 rounded-full font-semibold text-sm transition-colors \${currentFilter === 'all' ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}\`;
+            allBtn.innerText = "All Items";
+            allBtn.onclick = () => { currentFilter = 'all'; renderCategoryTabs(); renderMenuGrid(); };
+            tabsContainer.appendChild(allBtn);
+
+            menuData.sections.forEach(sec => {
+                const btn = document.createElement('button');
+                btn.className = \`px-6 py-2 rounded-full font-semibold text-sm transition-colors whitespace-nowrap \${currentFilter === sec.id ? 'bg-gray-900 text-white shadow-md' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}\`;
+                btn.innerText = sec.title.replace(/[^a-zA-Z\\s]/g, '').trim(); 
+                btn.onclick = () => { currentFilter = sec.id; renderCategoryTabs(); renderMenuGrid(); };
+                tabsContainer.appendChild(btn);
+            });
+        }
+
+        function renderMenuGrid() {
+            const grid = document.getElementById('posGrid');
+            grid.innerHTML = '';
+
+            menuData.sections.forEach(sec => {
+                if (currentFilter !== 'all' && currentFilter !== sec.id) return;
+
+                sec.items.forEach(item => {
+                    item.options.forEach(opt => {
+                        const isSoldOut = !item.available;
+                        const priceDisplay = opt.p === 0 ? "TBA" : \`$\${opt.p.toFixed(2)}\`;
+                        const btnColor = sec.style === 'dessert' ? 'bg-pink-50 border-pink-200 text-pink-900' : 'bg-white border-gray-200 text-gray-800';
+                        const hoverColor = sec.style === 'dessert' ? 'hover:border-pink-500 hover:shadow-pink-100' : 'hover:border-brand hover:shadow-brand/20';
+                        
+                        grid.innerHTML += \`
+                            <button 
+                                onclick="addToOrder('\${item.title.replace(/'/g,"\\\\'")}', '\${opt.l.replace(/'/g,"\\\\'")}', \${opt.p})"
+                                \${isSoldOut ? 'disabled' : ''}
+                                class="flex flex-col justify-between items-start text-left p-4 h-32 rounded-2xl border-2 transition-all duration-200 shadow-sm \${isSoldOut ? 'bg-gray-200 opacity-50 cursor-not-allowed border-gray-300' : \`\${btnColor} \${hoverColor} active:scale-95 shadow-md\`}"
+                            >
+                                <div>
+                                    <h4 class="font-bold text-sm leading-tight mb-1 line-clamp-2">\${item.title}</h4>
+                                    <span class="text-xs bg-black/5 rounded px-2 py-0.5 font-semibold text-gray-600">\${opt.l}</span>
+                                </div>
+                                <div class="w-full flex justify-between items-end mt-2">
+                                    <span class="font-bold \${isSoldOut ? 'text-gray-500' : 'text-brand-dark'} text-lg">\${priceDisplay}</span>
+                                    \${isSoldOut ? '<span class="text-xs font-black text-red-500 uppercase">Sold Out</span>' : ''}
+                                </div>
+                            </button>
+                        \`;
+                    });
+                });
+            });
+        }
+
+        function addToOrder(title, variant, price) {
+            const fullName = \`\${title} (\${variant})\`;
+            const existing = posCart.find(i => i.name === fullName);
+            
+            if (existing) existing.qty++;
+            else posCart.push({ name: fullName, price: price, qty: 1 });
+            
+            updateCartUI();
+        }
+
+        function modifyQty(index, delta) {
+            posCart[index].qty += delta;
+            if (posCart[index].qty <= 0) posCart.splice(index, 1);
+            updateCartUI();
+        }
+
+        function clearOrder() {
+            if(posCart.length === 0) return;
+            if(confirm("Are you sure you want to clear the current order?")) {
+                posCart = [];
+                updateCartUI();
+                const pane = document.getElementById('cartPane');
+                if (!pane.classList.contains('translate-x-full') && window.innerWidth < 1024) toggleMobileCart();
+            }
+        }
+
+        function updateCartUI() {
+            const list = document.getElementById('orderList');
+            const mBtn = document.getElementById('mobileCartBtn');
+            const mCount = document.getElementById('mobileCartCount');
+            const mTotal = document.getElementById('mobileCartTotal');
+            let total = 0;
+            let qtyCount = 0;
+            list.innerHTML = '';
+
+            if (posCart.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 mt-10 text-sm italic">No items in the order yet.</div>';
+                document.getElementById('posSubtotal').innerText = '$0.00';
+                document.getElementById('posTotal').innerText = '$0.00';
+                document.getElementById('btnTotal').innerText = '$0.00';
+                document.getElementById('checkoutAmountDue').innerText = '$0.00';
+                if(mBtn) mBtn.classList.add('hidden'); 
+                return;
+            }
+
+            posCart.forEach((item, index) => {
+                const itemTotal = item.price * item.qty;
+                total += itemTotal;
+                qtyCount += item.qty;
+                const pDisp = item.price === 0 ? 'TBA' : \`$\${item.price.toFixed(2)}\`;
+                const tDisp = item.price === 0 ? 'TBA' : \`$\${itemTotal.toFixed(2)}\`;
+
+                list.innerHTML += \`
+                    <div class="flex justify-between items-center bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                        <div class="flex-1 pr-3">
+                            <h4 class="font-bold text-xs text-gray-800 leading-tight">\${item.name}</h4>
+                            <p class="text-xs text-gray-400 font-mono mt-0.5">\${pDisp} each</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center bg-gray-100 rounded-md">
+                                <button onclick="modifyQty(\${index}, -1)" class="w-7 h-7 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-200 rounded-l-md">-</button>
+                                <span class="w-6 text-center text-sm font-bold">\${item.qty}</span>
+                                <button onclick="modifyQty(\${index}, 1)" class="w-7 h-7 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-200 rounded-r-md">+</button>
+                            </div>
+                            <span class="font-bold text-sm text-gray-900 w-12 text-right">\${tDisp}</span>
+                        </div>
+                    </div>
+                \`;
+            });
+
+            document.getElementById('posSubtotal').innerText = \`$\${total.toFixed(2)}\`;
+            document.getElementById('posTotal').innerText = \`$\${total.toFixed(2)}\`;
+            document.getElementById('btnTotal').innerText = \`$\${total.toFixed(2)}\`;
+            document.getElementById('checkoutAmountDue').innerText = \`$\${total.toFixed(2)}\`;
+            
+            if(mBtn) mBtn.classList.remove('hidden');
+            if(mCount) mCount.innerText = qtyCount;
+            if(mTotal) mTotal.innerText = \`$\${total.toFixed(2)}\`;
+        }
+
+        function toggleMobileCart() {
+            const pane = document.getElementById('cartPane');
+            const overlay = document.getElementById('cartOverlay');
+            if (pane.classList.contains('translate-x-full')) {
+                pane.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                pane.classList.add('translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function getCartTotal() {
+            return posCart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        }
+
+        function openCheckoutModal() {
+            if (posCart.length === 0) return alert("Order is empty!");
+            const total = getCartTotal();
+            if (total === 0 && posCart.some(i => i.price === 0)) {
+                alert("This order contains 'TBA' priced items. Please enter a manual price or resolve before checkout.");
+            }
+            document.getElementById('amountTendered').value = '';
+            document.getElementById('checkoutChange').innerText = "$0.00";
+            document.getElementById('checkoutChange').className = "font-bold text-2xl text-gray-400";
+            document.getElementById('completeTransactionBtn').disabled = true;
+            
+            document.getElementById('checkoutModal').classList.remove('hidden');
+            document.getElementById('checkoutModal').classList.add('flex');
+            document.getElementById('amountTendered').focus();
+        }
+
+        function closeCheckoutModal() {
+            document.getElementById('checkoutModal').classList.add('hidden');
+            document.getElementById('checkoutModal').classList.remove('flex');
+        }
+
+        function calculateChange() {
+            const total = getCartTotal();
+            const tendered = parseFloat(document.getElementById('amountTendered').value) || 0;
+            const change = tendered - total;
+            const changeEl = document.getElementById('checkoutChange');
+            const btn = document.getElementById('completeTransactionBtn');
+
+            if (tendered >= total && total > 0) {
+                changeEl.innerText = \`$\${change.toFixed(2)}\`;
+                changeEl.className = "font-bold text-2xl text-green-600";
+                btn.disabled = false;
+            } else {
+                changeEl.innerText = "Insufficient";
+                changeEl.className = "font-bold text-xl text-red-500";
+                btn.disabled = true;
+            }
+        }
+
+        function processTransaction() {
+            const total = getCartTotal();
+            const tendered = parseFloat(document.getElementById('amountTendered').value) || total;
+            const change = tendered - total;
+            const now = new Date();
+            const txId = "TX-" + Math.floor(100000 + Math.random() * 900000); 
+            
+            const txData = {
+                id: txId,
+                date: now.toLocaleDateString('en-US'),
+                time: now.toLocaleTimeString('en-US', { hour12: true }),
+                total: total,
+                tendered: tendered,
+                change: change,
+                items: JSON.parse(JSON.stringify(posCart)) 
+            };
+
+            transactions.unshift(txData); 
+            localStorage.setItem('loveAndLutoTransactions', JSON.stringify(transactions));
+
+            generateReceipt(txData);
+            closeCheckoutModal();
+            posCart = [];
+            updateCartUI();
+            setTimeout(() => { window.print(); }, 500);
+        }
+
+        function generateReceipt(tx) {
+            document.getElementById('r_date').innerText = tx.date;
+            document.getElementById('r_time').innerText = tx.time;
+            document.getElementById('r_txId').innerText = tx.id;
+            
+            const rList = document.getElementById('r_items');
+            rList.innerHTML = '';
+            
+            tx.items.forEach(item => {
+                const itemTotal = item.price * item.qty;
+                rList.innerHTML += \`
+                    <tr>
+                        <td class="py-1 pr-2 truncate">\${item.name}</td>
+                        <td class="text-center py-1">\${item.qty}</td>
+                        <td class="text-right py-1">$\${itemTotal.toFixed(2)}</td>
+                    </tr>
+                \`;
+            });
+
+            document.getElementById('r_total').innerText = \`$\${tx.total.toFixed(2)}\`;
+            document.getElementById('r_tendered').innerText = \`$\${tx.tendered.toFixed(2)}\`;
+            document.getElementById('r_change').innerText = \`$\${tx.change.toFixed(2)}\`;
+        }
+
+        function viewTransactions() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+            
+            if (transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No transactions recorded yet.</td></tr>';
+            } else {
+                transactions.forEach(tx => {
+                    const itemSummary = tx.items.map(i => \`\${i.qty}x \${i.name.split('(')[0].trim()}\`).join(', ');
+                    tbody.innerHTML += \`
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3 font-mono text-xs font-bold text-gray-600">\${tx.id}</td>
+                            <td class="p-3 text-xs text-gray-500">\${tx.date} <br> \${tx.time}</td>
+                            <td class="p-3 text-xs text-gray-700 truncate max-w-xs">\${itemSummary}</td>
+                            <td class="p-3 text-sm font-bold text-brand-dark">$\${tx.total.toFixed(2)}</td>
+                        </tr>
+                    \`;
+                });
+            }
+
+            document.getElementById('historyModal').classList.remove('hidden');
+            document.getElementById('historyModal').classList.add('flex');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+            document.getElementById('historyModal').classList.remove('flex');
+        }
+
+        window.onclick = function(event) {
+            const checkoutMod = document.getElementById('checkoutModal');
+            const historyMod = document.getElementById('historyModal');
+            if (event.target == checkoutMod) closeCheckoutModal();
+            if (event.target == historyMod) closeHistoryModal();
+        }
+    </script>
+</body>
+</html>
+    </template>
+
+    <!-- ========================================================= -->
     <!-- BUILDER SCRIPT LOGIC -->
     <!-- ========================================================= -->
     <script>
@@ -921,8 +1464,9 @@
         }
 
         // ==========================================
-        // HTML GENERATOR LOGIC
+        // DOWNLOAD GENERATORS
         // ==========================================
+        
         function downloadWebsite() {
             const tplTop = document.getElementById('tpl-top').innerHTML;
             const tplBottom = document.getElementById('tpl-bottom').innerHTML;
@@ -1015,19 +1559,29 @@
         </div>`;
             });
 
-            // Replace phone variable in bottom template
             let finalBottom = tplBottom.replace('__PHONE_NUMBER__', appData.phone || "642041280989");
-
-            // Stitch it all together
             const finalHTML = tplTop + middleHTML + finalBottom;
 
-            // Trigger Download
-            const blob = new Blob([finalHTML], { type: 'text/html' });
+            triggerFileDownload(finalHTML, 'index.html');
+        }
+
+        function downloadPOS() {
+            const tplPos = document.getElementById('tpl-pos').innerHTML;
+            
+            // Inject the appData into the __MENU_DATA__ placeholder inside the POS template
+            let finalHTML = tplPos.replace('__MENU_DATA__', JSON.stringify(appData, null, 4));
+            
+            triggerFileDownload(finalHTML, 'pos.html');
+        }
+
+        // Helper function to handle downloads
+        function triggerFileDownload(content, filename) {
+            const blob = new Blob([content], { type: 'text/html' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            a.download = 'index.html';
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
