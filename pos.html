@@ -52,45 +52,62 @@
 <body class="h-screen flex flex-col font-sans text-gray-800">
 
     <!-- Top Navigation Bar -->
-    <header class="bg-gray-900 text-white h-16 flex items-center justify-between px-6 shadow-md z-10 shrink-0 print:hidden">
-        <div class="flex items-center gap-3">
-            <span class="text-2xl">👨‍🍳</span>
-            <h1 class="font-bold text-xl tracking-wide">Love & Luto <span class="text-brand font-normal">POS</span></h1>
+    <header class="bg-gray-900 text-white h-16 flex items-center justify-between px-4 sm:px-6 shadow-md z-10 shrink-0 print:hidden">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <span class="text-xl sm:text-2xl">👨‍🍳</span>
+            <h1 class="font-bold text-lg sm:text-xl tracking-wide hidden sm:block">Love & Luto <span class="text-brand font-normal">POS</span></h1>
+            <h1 class="font-bold text-lg tracking-wide sm:hidden">L&L <span class="text-brand font-normal">POS</span></h1>
         </div>
-        <div class="flex gap-4">
-            <button onclick="viewTransactions()" class="text-sm bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors">
-                🧾 View Transactions
+        <div class="flex gap-2 sm:gap-4">
+            <button onclick="viewTransactions()" class="text-xs sm:text-sm bg-gray-800 hover:bg-gray-700 px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors">
+                <span class="sm:hidden">🧾 Txns</span>
+                <span class="hidden sm:inline">🧾 View Transactions</span>
             </button>
-            <div id="clock" class="text-sm font-mono bg-gray-800 px-4 py-2 rounded-lg flex items-center">
+            <div id="clock" class="text-xs sm:text-sm font-mono bg-gray-800 px-3 sm:px-4 py-2 rounded-lg flex items-center">
                 00:00:00
             </div>
         </div>
     </header>
 
     <!-- Main POS Layout -->
-    <div class="flex-1 flex overflow-hidden print:hidden">
+    <div class="flex-1 flex overflow-hidden print:hidden relative w-full">
         
         <!-- Left Pane: Menu Items -->
-        <div class="flex-1 flex flex-col bg-gray-100 relative">
+        <div class="flex-1 flex flex-col bg-gray-100 relative w-full lg:w-auto">
             <!-- Category Filter Tabs -->
             <div id="categoryTabs" class="flex p-4 gap-2 overflow-x-auto bg-white shadow-sm shrink-0">
                 <!-- Tabs injected by JS -->
             </div>
 
             <!-- Items Grid -->
-            <div class="flex-1 overflow-y-auto p-4">
-                <div id="posGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-20">
+            <div class="flex-1 overflow-y-auto p-4 relative">
+                <div id="posGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-28 lg:pb-4">
                     <!-- Buttons injected by JS -->
                 </div>
             </div>
+
+            <!-- Mobile Floating Cart Button -->
+            <button id="mobileCartBtn" onclick="toggleMobileCart()" class="lg:hidden absolute bottom-6 left-4 right-4 bg-gray-900 text-white p-4 rounded-2xl shadow-2xl z-20 flex justify-between items-center transition-transform active:scale-95 hidden">
+                <div class="flex items-center gap-3">
+                    <span class="bg-brand text-white text-sm font-bold px-3 py-1 rounded-full shadow-sm" id="mobileCartCount">0</span>
+                    <span class="font-bold text-sm">View Current Order</span>
+                </div>
+                <span class="font-bold text-xl text-brand" id="mobileCartTotal">$0.00</span>
+            </button>
         </div>
 
+        <!-- Mobile Cart Overlay -->
+        <div id="cartOverlay" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden transition-opacity" onclick="toggleMobileCart()"></div>
+
         <!-- Right Pane: Current Order / Cart -->
-        <div class="w-96 bg-white shadow-[-4px_0_15px_rgba(0,0,0,0.05)] flex flex-col shrink-0 z-10 print:hidden">
+        <div id="cartPane" class="fixed inset-y-0 right-0 w-full sm:w-96 bg-white shadow-2xl z-40 transform translate-x-full transition-transform duration-300 lg:translate-x-0 lg:relative lg:shadow-[-4px_0_15px_rgba(0,0,0,0.05)] lg:z-10 flex flex-col shrink-0 print:hidden">
             <!-- Order Header -->
             <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                 <h2 class="font-bold text-lg text-gray-800">Current Order</h2>
-                <button onclick="clearOrder()" class="text-sm text-red-500 hover:text-red-700 font-semibold px-2 py-1 bg-red-50 rounded">Clear All</button>
+                <div class="flex gap-2">
+                    <button onclick="clearOrder()" class="text-sm text-red-500 hover:text-red-700 font-semibold px-2 py-1 bg-red-50 rounded">Clear All</button>
+                    <button onclick="toggleMobileCart()" class="lg:hidden text-gray-500 hover:text-gray-800 font-bold px-3 py-1 bg-gray-200 rounded-md text-lg">&times;</button>
+                </div>
             </div>
 
             <!-- Order Items List -->
@@ -375,12 +392,22 @@
             if(confirm("Are you sure you want to clear the current order?")) {
                 posCart = [];
                 updateCartUI();
+                
+                // Hide mobile cart if it was open
+                const pane = document.getElementById('cartPane');
+                if (!pane.classList.contains('translate-x-full') && window.innerWidth < 1024) {
+                    toggleMobileCart();
+                }
             }
         }
 
         function updateCartUI() {
             const list = document.getElementById('orderList');
+            const mBtn = document.getElementById('mobileCartBtn');
+            const mCount = document.getElementById('mobileCartCount');
+            const mTotal = document.getElementById('mobileCartTotal');
             let total = 0;
+            let qtyCount = 0;
             list.innerHTML = '';
 
             if (posCart.length === 0) {
@@ -388,12 +415,16 @@
                 document.getElementById('posSubtotal').innerText = '$0.00';
                 document.getElementById('posTotal').innerText = '$0.00';
                 document.getElementById('btnTotal').innerText = '$0.00';
+                document.getElementById('checkoutAmountDue').innerText = '$0.00';
+                
+                if(mBtn) mBtn.classList.add('hidden'); // Hide float button when empty
                 return;
             }
 
             posCart.forEach((item, index) => {
                 const itemTotal = item.price * item.qty;
                 total += itemTotal;
+                qtyCount += item.qty;
                 const pDisp = item.price === 0 ? 'TBA' : `$${item.price.toFixed(2)}`;
                 const tDisp = item.price === 0 ? 'TBA' : `$${itemTotal.toFixed(2)}`;
 
@@ -419,9 +450,29 @@
             document.getElementById('posTotal').innerText = `$${total.toFixed(2)}`;
             document.getElementById('btnTotal').innerText = `$${total.toFixed(2)}`;
             document.getElementById('checkoutAmountDue').innerText = `$${total.toFixed(2)}`;
+            
+            // Update Mobile floating button
+            if(mBtn) mBtn.classList.remove('hidden');
+            if(mCount) mCount.innerText = qtyCount;
+            if(mTotal) mTotal.innerText = `$${total.toFixed(2)}`;
         }
 
         // --- CHECKOUT LOGIC ---
+        function toggleMobileCart() {
+            const pane = document.getElementById('cartPane');
+            const overlay = document.getElementById('cartOverlay');
+            
+            if (pane.classList.contains('translate-x-full')) {
+                // Open Slide-over
+                pane.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                // Close Slide-over
+                pane.classList.add('translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
         function getCartTotal() {
             return posCart.reduce((sum, item) => sum + (item.price * item.qty), 0);
         }
